@@ -1,15 +1,27 @@
-from subkeys import generate_subkeys, permutate_bits
+import sys
 
+from random import shuffle
+from subkeys import generate_subkeys, permutate_bits
 from utils import *
 
-# The text that we want to be encrypted
-plaintext = '0000000100100011010001010110011110001001101010111100110111101111'
-print('Plaintext: %s' % plaintext)
+# Check whether the user wants to decrypt or encrypt the message
+try:
+    if sys.argv[1] != 'decrypt' and sys.argv[1] != 'encrypt':
+        raise ValueError()
+    decryption = True if sys.argv[1] == 'decrypt' else False
+except (IndexError, ValueError):
+    print('Usage: python main.py encrypt/decrypt')
+    sys.exit()
 
+# The text that we want to be encrypted
+plaintext = '0011011011111100011000000100000110111010110001111101110111011000'
+
+print('Plaintext: %s' % plaintext)
 # Get the subkeys
 subkeys = generate_subkeys(key, p_box_56, shift_amounts, p_box_48)
 
 # We first perform an initial permutation on the plaintext 64 bits
+print("Initial permutation box:\n%s" % str(initial_permutation_box))
 initial_permutation = permutate_bits(plaintext, initial_permutation_box)
 
 # We initialise these to be previous as when we hit the for loop, we will be on the first iteration
@@ -20,7 +32,8 @@ previous_right_side = initial_permutation[len(initial_permutation)/2:len(initial
 # For n going from 1 to 16 we calculate:
 # L(n) = R(n-1)
 # R(n) = L(n-1) XOR f( R(n-1), K(n) )
-for i in range(0, 16):
+for_range = range(15, -1, -1) if decryption else range(0, 16)
+for i in for_range:
     current_left_side = previous_right_side # L1
 
     # To calculate f, we first expand each block Rn-1 from 32 bits to 48 bits. This is done by using a selection table that repeats some of the bits in Rn-1.
@@ -71,4 +84,5 @@ reversed = previous_right_side + previous_left_side
 
 # Now we apply a final permutation
 ciphertext = permutate_bits(reversed, final_p_box)
+
 print('Ciphertext: %s' % ciphertext)
